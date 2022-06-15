@@ -1,0 +1,15 @@
+CREATE TYPE roles AS ENUM ('ROLE_ADMIN', 'ROLE_USER');
+
+CREATE TABLE users
+(
+    ID       BIGSERIAL PRIMARY KEY NOT NULL,
+    LOGIN    VARCHAR UNIQUE        NOT NULL,
+    PASSWORD VARCHAR               NOT NULL,
+    ROLE     roles                 NOT NULL
+);
+
+INSERT INTO users (LOGIN, PASSWORD, ROLE)
+VALUES ('admin', '$2a$12$0OJNUYQ7y8CX3RknDSj8uuffdKeO2PSnrT4SgRAViyfXz7imDPvAG', 'ROLE_ADMIN');
+
+INSERT INTO users (LOGIN, PASSWORD, ROLE)
+VALUES ('user', '$2a$12$hwrztKXlSJjbdOst0e8wcOAR5XipnpqjUBgY3Sxy/18BxKUkOkigu', 'ROLE_USER');

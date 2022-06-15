@@ -1,0 +1,49 @@
+services:
+  - name: docker:dind
+    command: [ "--tls=false" ]
+
+variables:
+  DOCKER_HOST: "tcp://docker:2375"
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_DRIVER: overlay2
+
+stages:
+  - test
+  - build
+  - deploy
+
+test:
+  image: maven:3-openjdk-17
+  stage: test
+  script:
+    - pwd
+    - mvn test
+
+build:
+  image: maven:3-openjdk-17
+  stage: build
+  script:
+    - mvn package -B -DskipTests
+  artifacts:
+    paths:
+      - target/*.jar
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+      when: always
+
+deploy:
+  image: docker:latest
+  services:
+    - docker:dind
+  stage: deploy
+  script:
+    - docker build -f Dockerfile --iidfile imageid.txt -t registry.heroku.com/tinkoff-fintech-travelmap .
+    - docker login -u _ -p $HEROKU_TOKEN registry.heroku.com
+    - docker push registry.heroku.com/tinkoff-fintech-travelmap
+    - apk add --no-cache curl
+    - echo "Docker Image ID is $(cat imageid.txt)"
+    - |-
+      curl -X PATCH https://api.heroku.com/apps/tinkoff-fintech-travelmap/formation --header "Content-Type: application/json" --header "Accept: application/vnd.heroku+json; version=3.docker-releases" --header "Authorization: Bearer ${HEROKU_TOKEN}" --data '{ "updates": [ { "type": "web", "docker_image": "'$(cat imageid.txt)'" } ] }'
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master"
+      when: manual
